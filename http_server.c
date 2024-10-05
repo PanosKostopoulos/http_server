@@ -24,6 +24,9 @@ char * directory_parser(char *buffer, int read_counter){
     int start = i+1;
     while(*(buffer+i)!=' '){ i++;}
     int end = i;
+    if (start==end){
+        return NULL;
+    }
     char * directory = malloc((end-start)*sizeof(char)+1);
     for(int i=start;i<end;i++){
         *(directory+i-start) = *(buffer+i);
@@ -91,6 +94,12 @@ int main() {
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
 
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+        perror("setsockopt failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         perror("bind failed");
         exit(EXIT_FAILURE);
@@ -109,7 +118,6 @@ int main() {
 	while(1){
 		int rc = 0;
         rc = read(client_socket,buffer,sizeof(buffer));
-			
 		if(rc < 1){
 			perror("read failed");
         }
@@ -121,13 +129,6 @@ int main() {
                 printf("%c",buffer[i]);
             }
             directory = directory_parser(buffer, rc);
-            int i=0;
-            printf("this is the directory: ");
-            while(*(directory+i)!=EOF){
-                printf("%c",*(directory+i));
-                i++;
-            }
-            printf("\n");
             break;
         }
 	}
@@ -141,7 +142,7 @@ int main() {
      
         if (send(client_socket, message, strlen(message), 0) < 0){
     	    perror("send failed");
-	    exit(EXIT_FAILURE);
+	        exit(EXIT_FAILURE);
         }
     }
 	else{
@@ -151,7 +152,7 @@ int main() {
                         "\r\n";
         if (send(client_socket, message, strlen(message), 0) < 0){
     	    perror("send failed");
-	    exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE);
         }
 
         send_file(directory, client_socket);
